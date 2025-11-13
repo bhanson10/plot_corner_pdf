@@ -16,7 +16,6 @@ function plt = plot_corner_pdf(X,varargin)
 %                   *    name -- display name, if display==1
 %                   *   means -- plot weighted mean of point mass PDF
 %                   *     axh -- figure axis
-%                   *   alpha -- surface visibility
 %                   *    type -- distribution type
 %                   *    hist -- plot histogram on i==j plots
 %               * aR -- alpha radius (for 2D and 3D functionality only)
@@ -40,17 +39,14 @@ p.color = {"r", "r", "r"};
 p.display = 0; 
 p.means = 0;
 p.axh = gca; 
-p.alpha = [0.5, 0.3, 0.1];
-p.type = "curve";
+p.type = "scatter";
 aR = [2 2 2]; 
 isovalue = [0.68, 0.95, 0.997]; 
 axc = p.axh; 
-scatter_b = 1; 
 
 for i=1:2:length(varargin)
     if strcmp('P',varargin{i})
         P = varargin{i+1};
-        scatter_b = 0; 
     elseif strcmp('p',varargin{i})
         p = varargin{i+1};
     elseif strcmp('aR',varargin{i})
@@ -66,9 +62,12 @@ for i=1:2:length(varargin)
     end
 end
 
+if ~isfield(p, 'type')
+    p.type = "scatter"; 
+end
 
 [N, D] = size(X); 
-if scatter_b
+if strcmp(p.type, "scatter")
     P = zeros(N,1);
 end
 [NP, ~] = size(P); 
@@ -108,34 +107,27 @@ end
 if ~isfield(p,'axh')
     p.axh=gca;
 end
-if ~isfield(p,'alpha')
-    p.alpha=flip(logspace(log(0.5),log(0.75),numel(isovalue)));
-else
-    p.alpha = p.alpha.*ones(1,numel(isovalue));
-end
 if isfield(p,'type')
     if strcmp(p.type, "curve")
     elseif strcmp(p.type, "grid")
     elseif strcmp(p.type, "scatter")
-        if isfield(p,'size')
-            if isscalar(p.size)
-                p.size = p.size.*ones(1,numel(isovalue));
-            end
-        else
-            p.size = 10.*ones(1,numel(isovalue));
+        if ~isfield(p,'marker')
+            p.marker='o';
+        end
+        if ~isfield(p,'ms')
+            p.ms=10;
+        end
+    elseif strcmp(p.type, "ukf")
+        mu = zeros(D,1); 
+        for j = 1:N
+            mu = mu + P(j, 1) .* X(j, :)'; % Mean
+        end
+        S = zeros(D,D); 
+        for j = 1:N
+            S = S + P(j, 2) .* ((X(j, :)' - mu)*(X(j, :)' - mu)'); % Covariance
         end
     else
         error("Unsupported type.")
-    end
-else
-    p.type = "curve"; 
-end
-if scatter_b
-    if ~isfield(p,'marker')
-        p.marker='o';
-    end
-    if ~isfield(p,'ms')
-        p.ms=10;
     end
 end
 if exist("aR", "var")
@@ -188,32 +180,74 @@ end
 count = 1; plt = {}; 
 for i = 1:D
     for j = 1:i
-        pause(0.1); nexttile((i - 1) * D + j); p.axh = gca; 
+        pause(0.2); nexttile((i - 1) * D + j); p.axh = gca; 
         if lbls_bool
-            hold on; box on; set(p.axh, 'FontName', 'times', 'FontSize', 14);
+            hold on; box on; set(p.axh, 'FontName', 'times', 'FontSize', 14, "LineWidth", 2);
         end
         if i==j
-            if scatter_b
-                if p.hist
-                    plt{count} = histogram(X(:,i), 'Normalization', 'probability', 'FaceColor', p.color{1});
+            if p.hist
+                plt{count} = histogram(X(:,i), 'Normalization', 'probability', 'FaceColor', p.color{1}, "EdgeColor", "none");
+                if (i == 1)
+                    ylabel("Probability", 'FontSize', 18, 'FontName', 'Times', 'Interpreter', 'latex');
                 end
-            else
-                plt{count} = plot_nongaussian_surface(X(:,i),P,'p',p); 
             end
-            % xlim([min(X(:,i)), max(X(:,i))]);
         else
-            if scatter_b
+            if strcmp(p.type, "scatter")
                 plt{count} = scatter(X(:,j), X(:,i), p.ms, p.color{1}, 'filled', p.marker);
+            elseif strcmp(p.type, "ukf")
+                p.type = "line";
+                [plt{count}, shp] = plot_gaussian_ellipsoid(mu([j,i], 1), S([j,i], [j,i]), 'p', p); 
+                p.type = "ukf";
             else
                 plt{count} = plot_nongaussian_surface(X(:,[j,i]),P,'p',p); 
             end
-            % if ~lbls_bool
-            %     xlim([min(p.axh.XLim(1), min(X(:,j))), max(p.axh.XLim(2), max(X(:,j)))]);
-            %     ylim([min(p.axh.YLim(1), min(X(:,i))), max(p.axh.YLim(2), max(X(:,i)))]);
-            % else
-            %     xlim([min(X(:,j)), max(X(:,j))]);
-            %     ylim([min(X(:,i)), max(X(:,i))]);
-            % end
+
+            pad_frac = 0.1;     % 10% padding
+            eps_min = 1e-9;     % minimum half-range to avoid degenerate limits
+
+            if ~lbls_bool
+                if strcmp(p.type, "ukf")
+                    shp = shp{1};
+                    x_all = [p.axh.XLim, shp(1, :)];
+                    y_all = [p.axh.YLim, shp(2, :)];
+                else
+                    x_all = [p.axh.XLim, X(:,j)'];
+                    y_all = [p.axh.YLim, X(:,i)'];
+                end
+            else
+                if strcmp(p.type, "ukf")
+                    shp = shp{1};
+                    x_all = shp(1, :);
+                    y_all = shp(2, :);
+                else
+                    x_all = X(:,j);
+                    y_all = X(:,i);
+                end
+            end
+
+            % Compute symmetric limits for x
+            x_min = min(x_all);
+            x_max = max(x_all);
+            x_center = 0.5 * (x_max + x_min);
+            x_half_range = 0.5 * (x_max - x_min);
+            % guard against zero range and add padding
+            x_half_range = max(x_half_range, eps_min);
+            x_half_range = x_half_range * (1 + pad_frac);
+            xlim(p.axh, [x_center - x_half_range, x_center + x_half_range]);
+
+            % Compute symmetric limits for y
+            y_min = min(y_all);
+            y_max = max(y_all);
+            y_center = 0.5 * (y_max + y_min);
+            y_half_range = 0.5 * (y_max - y_min);
+            % guard against zero range and add padding
+            y_half_range = max(y_half_range, eps_min);
+            y_half_range = y_half_range * (1 + pad_frac);
+            ylim(p.axh, [y_center - y_half_range, y_center + y_half_range]);
+
+            % lock the limits so MATLAB won't autoscale them later
+            p.axh.XLimMode = 'manual';
+            p.axh.YLimMode = 'manual';
         end
         
         if lbls_bool
@@ -226,7 +260,9 @@ for i = 1:D
             if i ~= D, xticks([]); end
             if (j ~= 1), yticks([]); end
         end
-        axis normal; count = count + 1; drawnow; 
+        axis normal; 
+        count = count + 1; 
+        drawnow; 
     end
 end
 end
