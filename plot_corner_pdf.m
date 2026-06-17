@@ -1,6 +1,6 @@
 function plt = plot_corner_pdf(X, varargin)
 % plot_corner_pdf.m
-% Benjamin Hanson, 2025
+% Benjamin Hanson, 2026
 % 
 %   Given the N-by-D coordinate matrix X and the N-by-1 probability vector 
 %   P, creates a D-by-D corner figure. Each grid of the corner plot contains 
