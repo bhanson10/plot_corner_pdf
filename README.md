@@ -8,7 +8,8 @@ $$
 \end{gather}
 $$
 
-This function is meant to be used in tandem with [plot_nongaussian_surface.m](https://github.com/bhanson10/plot_nongaussian_surface) and plot_gaussian_ellipsoid.m
+This function is meant to be used in tandem with [plot_nongaussian_surface.m](https://github.com/bhanson10/plot_nongaussian_surface) and [plot_gaussian_ellipsoid.m](https://github.com/bhanson10/plot_gaussian_ellipsoid). <br>
+
 Please direct any questions to blhanson@ucsd.edu. <br><br>
 
 ![plot_corner_pdf](plot_corner_pdf.png)
