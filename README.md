@@ -10,4 +10,4 @@ $$
 
 Please direct any questions to blhanson@ucsd.edu. <br><br>
 
-![plot_corner_pdf](https://github.com/user-attachments/assets/f1545cd0-0d19-4118-99d6-6bc179e42665)
+![plot_corner_pdf](plot_corner_pdf.png)
