@@ -124,8 +124,8 @@ else
         if ~isfield(p,'cut_order')
             p.cut_order = 6; 
         end
-        mu = reconstruct_CUT(X, P, 1, p.cut_order); 
-        S  = reconstruct_CUT(X, P, 2, p.cut_order); 
+        mu = reconstruct_cut(X, P, 1, p.cut_order); 
+        S  = reconstruct_cut(X, P, 2, p.cut_order); 
         if ~isfield(p, "points_too")
             p.points_too = 0;
         end
